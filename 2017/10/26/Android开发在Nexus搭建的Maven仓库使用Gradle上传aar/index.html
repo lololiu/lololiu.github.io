@@ -1,0 +1,95 @@
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+	
+	<title>Android开发在Nexus搭建的Maven仓库使用Gradle上传aar</title>
+	<meta name="keywords" content="My Blog, Spider Bitch!">
+    <meta name="baidu-site-verification" content="vxDbv63a4S">
+    <meta name="google-site-verification" content="9eUnNRo8qiEexz_FacVB-p-0z9OViF--gZ9kfL5hofo">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    
+    <!--<link rel="stylesheet" href="/css/main.css">-->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+    <link href="/css/main.css?v=2" rel="stylesheet" type="text/css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <!--<link rel="stylesheet" href="/css/style.css">-->
+    
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">
+
+    
+	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+    
+
+</head>
+
+<body 
+	
+	>
+
+
+
+    <div class="container center-block">
+        <div class="col-md-1"></div>
+        <div class="col-md-10 col-sm-12">
+            <h2 id="Android开发在Nexus搭建的Maven仓库使用Gradle上传aar"><a href="#Android开发在Nexus搭建的Maven仓库使用Gradle上传aar" class="headerlink" title="Android开发在Nexus搭建的Maven仓库使用Gradle上传aar"></a>Android开发在Nexus搭建的Maven仓库使用Gradle上传aar</h2><p>最近多个项目中都使用到一些封装好的base类库，而且这些类库在我们项目中基本上是通用的，有时候在某个添加修改一些内容都必须在其他项目中也进行相同修改保证同步，操作繁琐不说，在移植过程中也不能保证不出纰漏。听说后台同学已经有用Nexus搭建好本地服务器的Maven仓库，因此也便尝试着把Android项目中的一些基础类库也传上去，方便更好地维护。</p>
+<p>使用Nexus搭建Maven仓库网上教程很多，这里也不多做说明，只记录一下我在封装上传类库的过程。</p>
+<h3 id="Repository-Policy-的概念"><a href="#Repository-Policy-的概念" class="headerlink" title="Repository Policy 的概念"></a>Repository Policy 的概念</h3><p>在操作之前先要说一下这个Repository Policy，中文意思就是仓库策略，在新建仓库的时候会让你选择：Release或者是Snapshot，就是说你这个仓库是选择存放正式版的库和快照版的。举个栗子来说，如果有A和B两个工程师协调开发某个项目，其中A负责维护项目中封装的一个功能库，A每回修改一些代码提交到Release类型的仓库，A都必须要修改版本号使其递增。假设当前B引用的是v1.0.2的版本，A修改一部分代码但是没有将版本号进行修改便提交到maven仓库中，即使仓库中的代码是最新的，但是B刷新依赖时，由于B项目中的版本号和仓库中的是一致的，因此并不会进行更新。</p>
+<p>这就导致一个问题：A每回修改都要修改版本号并且通知B进行依赖更新，版本号一直往上增加导致有点混乱了，而且频繁地修改让B也很不耐烦。那有没有一个方法来解决这个问题呢？答案就是使用Snapshot仓库，Snapshop仓库可以让你在开发中尽情提交多次代码也不会导致版本号增加，而且B也不需要手动修改依赖版本号，只需重新刷新一下依赖即可！</p>
+<p>但是注意的是Release和Snapshot是两个不同的仓库，也就是说我们可以新建一个Snapshot仓库在开发中调试，等到调试完成再在Release仓库中发布正式版本！</p>
+<h3 id="具体操作"><a href="#具体操作" class="headerlink" title="具体操作"></a>具体操作</h3><ol>
+<li><p>在Nexus操作后台新建仓库</p>
+<p>登录后台管理页面，点击左侧面板的<strong>Repositories</strong>选项进入仓库面板，找到<code>Add</code>按钮选择<code>Hosted Repository</code>，然后在下方弹出的表单中填写一些配置信息：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/maven-resp-add.png" alt=""></p>
+<ul>
+<li>Repository ID 和 Repository Name 自己填写仓库名称</li>
+<li>Repository Policy 即仓库策略，我们可以新建两个仓库，一个Release一个Snapshot</li>
+<li>Deployment Policy 记得选择 <code>Allow Redeploy</code></li>
+</ul>
+<p>填写完成后点击<code>Save</code>进行保存之后，仓库列表中就会显示你刚刚创建的仓库并且在后面有这个仓库对应的url地址：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/maven%E4%BB%93%E5%BA%93%E6%96%B0%E5%BB%BA%E5%AE%8C%E6%88%90.png" alt=""></p>
+</li>
+<li><p>配置Gradle脚本</p>
+<ul>
+<li><p>在需要上传仓库的模块的<code>build.gradle</code>中添加下面代码：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">apply <span class="string">plugin:</span> <span class="string">'maven'</span></span><br><span class="line">...</span><br><span class="line">uploadArchives &#123;</span><br><span class="line">    repositories.mavenDeployer &#123;</span><br><span class="line">        name = <span class="string">'mavenCentralReleaseDeployer'</span></span><br><span class="line">        snapshotRepository(<span class="string">url:</span> <span class="string">"http://x.x.x.x:8081/nexus/content/repositories/android-snapshot/"</span>) &#123;</span><br><span class="line">            authentication(<span class="string">userName:</span> <span class="string">"Maven后台账号"</span>, <span class="string">password:</span> <span class="string">"Maven后台密码"</span>)</span><br><span class="line">        &#125;</span><br><span class="line">        repository(<span class="string">url:</span> <span class="string">"http://x.x.x.x:8081/nexus/content/repositories/android-common-lib/"</span>) &#123;</span><br><span class="line">             authentication(<span class="string">userName:</span> <span class="string">"Maven后台账号"</span>, <span class="string">password:</span> <span class="string">"Maven后台密码"</span>)</span><br><span class="line">        &#125;</span><br><span class="line">        pom.version = <span class="string">"1.0.0"</span></span><br><span class="line">        pom.artifactId = <span class="string">"youlibname"</span></span><br><span class="line">        pom.groupId = <span class="string">"yougroupId"</span> <span class="comment">//如com.xx.lib</span></span><br><span class="line">        pom.name = <span class="string">"youlibname"</span></span><br><span class="line">        pom.packaging = <span class="string">"aar"</span> <span class="comment">//类型</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>上传</p>
+<p>在Android Studio中找到Gradle操作面板，找到模块对应的Tasks–&gt;upload—&gt;uploadArchives，双击即可执行脚本方法进行上传：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/gradle%E6%93%8D%E4%BD%9C%E9%9D%A2%E6%9D%BF.png" alt=""></p>
+</li>
+<li><p>项目中进行依赖</p>
+<p>修改需要进行引用类库的项目根目录的<code>build.gradle</code>文件：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">allprojects &#123;</span><br><span class="line">    repositories &#123;</span><br><span class="line">        jcenter()</span><br><span class="line">        maven &#123; url <span class="string">"http://x.x.x.x:8081/nexus/content/repositories/android-common-lib/"</span>&#125;</span><br><span class="line">        maven &#123; url <span class="string">"http://x.x.x.x:8081/nexus/content/repositories/android-snapshot/"</span> &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在需要引入的模块的<code>build.gradle</code>中添加依赖：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">dependencies &#123;</span><br><span class="line">    compile fileTree(<span class="string">dir:</span> <span class="string">'libs'</span>, <span class="string">include:</span> [<span class="string">'*.jar'</span>])</span><br><span class="line">	...</span><br><span class="line">    compile(<span class="string">'yourgroupId:artifactId:1.0.0@aar'</span>) &#123;</span><br><span class="line">        transitive = <span class="literal">true</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>使用Snapshot快照功能 </p>
+<p>很简单！你只需要在你的<code>uploadArchives</code>脚本方法中把<code>pom.version = &quot;1.0.0&quot;</code>改成<code>pom.version = &quot;1.0.0-SNAPSHOT&quot;</code>即可，注意后面的单词都是大写，这样即使你进行了很多次修改，这都是提交到snapshot的仓库中，并不需要递增版本号。而在响应的依赖后面也加上：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">compile(<span class="string">'yourgroupId:artifactId:1.0.0-SNAPSHOT@aar'</span>) &#123;</span><br><span class="line">    transitive = <span class="literal">true</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>这样你只需要更新一下依赖就可以引用到Snapshot的最新代码了。</p>
+<p>注意：有时候发现Snapshot库更新了但是项目中刷新依赖并没有效果，经过查阅<a href="https://stackoverflow.com/questions/26610382/android-studio-snapshot-dependencies-dont-update-properly" target="_blank" rel="noopener">资料</a>可知：需要手动配置一下依赖缓存持续时长，默认情况下gradle在24小时内不会重新更新。</p>
+<p>再模块内<code>build.gradle</code>中配置：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//快照版本及时刷新library</span></span><br><span class="line">configurations.all &#123;</span><br><span class="line">    <span class="comment">// Don't cache changing modules at all.</span></span><br><span class="line">    resolutionStrategy.cacheChangingModulesFor <span class="number">0</span>, <span class="string">'seconds'</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此，整个工程配置完毕！(๑╹◡╹)ﾉ”””</p>
+</li>
+</ol>
+
+            </div>
+        <div class="col-md-1">
+        </div>
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>

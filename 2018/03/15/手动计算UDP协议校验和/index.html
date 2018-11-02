@@ -1,0 +1,123 @@
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+	
+	<title>手动计算UDP协议校验和</title>
+	<meta name="keywords" content="My Blog, Spider Bitch!">
+    <meta name="baidu-site-verification" content="vxDbv63a4S">
+    <meta name="google-site-verification" content="9eUnNRo8qiEexz_FacVB-p-0z9OViF--gZ9kfL5hofo">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    
+    <!--<link rel="stylesheet" href="/css/main.css">-->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+    <link href="/css/main.css?v=2" rel="stylesheet" type="text/css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <!--<link rel="stylesheet" href="/css/style.css">-->
+    
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">
+
+    
+	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+    
+
+</head>
+
+<body 
+	
+	>
+
+
+
+    <div class="container center-block">
+        <div class="col-md-1"></div>
+        <div class="col-md-10 col-sm-12">
+            <h2 id="手动计算UDP协议校验和"><a href="#手动计算UDP协议校验和" class="headerlink" title="手动计算UDP协议校验和"></a>手动计算UDP协议校验和</h2><h4 id="UDP协议格式"><a href="#UDP协议格式" class="headerlink" title="UDP协议格式"></a>UDP协议格式</h4><p>先分析一下UDP协议的格式：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/udp%E5%8D%8F%E8%AE%AE.jpg" alt="UDP协议"></p>
+<p>值得注意的几个地方：</p>
+<ol>
+<li><p><strong>UDP伪首部</strong></p>
+<p>伪首部(pseudo header)，通常有TCP伪首部和UDP伪首部。在UDP/TCP伪首部中，包含32位源IP地址，32位目的IP地址，8位填充0，8位协议，16位TCP/UDP长度（共12字节）。通过伪首部的校验，UDP可以确定该数据报是不是发给本机的，通过首部协议字段，UDP可以确认有没有误传。</p>
+<p><strong>伪首部并非TCP&amp;UDP数据报中实际的有效成分</strong>。伪首部是一个虚拟的数据结构，其中的信息是从<strong>数据报所在IP分组头的分组头中提取</strong>的，既不向下传送也不向上递交，而仅仅是为<strong>计算校验和</strong>。这样的校验和，既校验了TCP&amp;UDP用户数据的源端口号和目的端口号以及TCP&amp;UDP用户数据报的数据部分，又检验了IP数据报的源IP地址和目的地址。伪报头保证TCP&amp;UDP数据单元到达正确的目的地址。因此，伪报头中包含IP地址并且作为计算校验和需要考虑的一部分。最终目的端根据伪报头和数据单元计算校验和以验证通信数据在传输过程中没有改变而且到达了正确的目的地址。</p>
+</li>
+<li><p><strong>8位协议号（17）</strong></p>
+<p>UDP的协议号10进制是17，对应的16进制则是<strong>0x11</strong>。</p>
+</li>
+<li><p><strong>UDP长度</strong></p>
+<p>伪首部的UDP长度和首部的UDP长度是一个东西，包括UDP头部8字节加数据部分。</p>
+</li>
+</ol>
+<h4 id="校验和的计算"><a href="#校验和的计算" class="headerlink" title="校验和的计算"></a>校验和的计算</h4><p>UDP的校验和需要计算UDP首部加数据荷载部分，还需要加上UDP伪首部。<br>这个伪首部指，源地址、目的地址、UDP数据长度、协议类型（0x11），协议类型就一个字节，需要在前面补一个字节的0x0，构成12个字节。</p>
+<p>伪首部+UDP首部+数据 一起计算校验和：</p>
+<ol>
+<li>按每16位求和得出一个32位的数；</li>
+<li>如果这个32位的数，高16位不为0，则高16位加低16位再得到一个32位的数；</li>
+<li>重复第2步直到高16位为0，将低16位取反，得到校验和。</li>
+</ol>
+<h4 id="实例操作"><a href="#实例操作" class="headerlink" title="实例操作"></a>实例操作</h4><p>为了能够手动计算一下校验和，我们使用WireShark软件抓取了一份UDP报文：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/wireshark_UDP协议.png" alt="wireshark抓取UDP"></p>
+<p>我们需要的数据在上图中均有显示，鼠标选择上面的条目下面的字节数据中则会高亮显示对应的16进制数据。最后我们可以将校验和计算所需要的数据的16进制摘录出来（当然你也可以右键选中<code>as bits</code>来显示2进制格式）。</p>
+<p>另外可以看到的是，Length表示UDP长度为39，而Data为31字节，Data加上UDP首部的8字节刚好等于Length!</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">类型</th>
+<th>16进制数据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">源IP地址</td>
+<td>3d 97 b4 db</td>
+</tr>
+<tr>
+<td style="text-align:left">目的IP地址</td>
+<td>c0 a8 01 4c</td>
+</tr>
+<tr>
+<td style="text-align:left">补位0+协议号</td>
+<td>00 11</td>
+</tr>
+<tr>
+<td style="text-align:left">UDP长度</td>
+<td>00 27</td>
+</tr>
+<tr>
+<td style="text-align:left">源端口号</td>
+<td>1f 40</td>
+</tr>
+<tr>
+<td style="text-align:left">目的端口号</td>
+<td>0f b4</td>
+</tr>
+<tr>
+<td style="text-align:left">UDP长度</td>
+<td>00 27</td>
+</tr>
+<tr>
+<td style="text-align:left">数据</td>
+<td>02 68 a0 00 b9 03 e8 18 79 a9 67 00 00 00 0c 30 94 46 48 c7 60 f6 f4 d3 19 3e 15 de 8d 70 03</td>
+</tr>
+</tbody>
+</table>
+<p>因为校验和需要每16位进行相加，因此需要两位16进制一起相加，如上图源IP地址，即先用<code>3d97</code>和<code>b4db</code>相加，注意数据部分最后面可能只有一位16进制数了即只有8位了，则需要在后面补0x00，比如上面表格中最后<code>03</code>后面需要加<code>00</code>。</p>
+<p>window系统自带的计算器调到程序员模式后可以很方便地进行16进制计算：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/%E8%AE%A1%E7%AE%97%E5%99%A8.png" alt="window自带计算器"></p>
+<p>使用计算器依照上述方法每2个16进制数字依次相加，得到的结果为80677，转换成2进制为32位，并且高16位不为0：<code>0000 0000 0000 1000 0000 0110 0111 0111</code>。然后依照规则高16位与低16位相加得到高16位为0的<code>0000 0110 0111 1111</code>，取其反码得到<code>1111 1001 1000 0000</code>，转换为16进制为<code>0xf980</code>。和wireshark抓取数据得到的checksum值是一样的！到此为止，校验和计算结束！</p>
+
+            </div>
+        <div class="col-md-1">
+        </div>
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+	
+	<title>Hexo主题新增Menu作为文章目录</title>
+	<meta name="keywords" content="My Blog, Spider Bitch!">
+    <meta name="baidu-site-verification" content="vxDbv63a4S">
+    <meta name="google-site-verification" content="9eUnNRo8qiEexz_FacVB-p-0z9OViF--gZ9kfL5hofo">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    
+    <!--<link rel="stylesheet" href="/css/main.css">-->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+    <link href="/css/main.css?v=2" rel="stylesheet" type="text/css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <!--<link rel="stylesheet" href="/css/style.css">-->
+    
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">
+
+    
+	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+    
+
+</head>
+
+<body 
+	
+	>
+
+
+
+    <div class="container center-block">
+        <div class="col-md-1"></div>
+        <div class="col-md-10 col-sm-12">
+            <h3 id="Hexo主题新增Menu作为文章目录"><a href="#Hexo主题新增Menu作为文章目录" class="headerlink" title="Hexo主题新增Menu作为文章目录"></a>Hexo主题新增Menu作为文章目录</h3><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>前段时间偶然逛到<a href="http://www.yinwang.org/" target="_blank" rel="noopener">王垠的博客</a>，发现其博客风格简洁大气，很对我的口味。后来在<a href="https://hexo.io/themes/" target="_blank" rel="noopener">Themes | Hexo</a>闲逛时发现有网友上传了王垠博客风格的主题<a href="https://github.com/mickeyouyou/yinwang" target="_blank" rel="noopener">yinwang</a>，便迫不及待地换上了这个主题。</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/blog.png" alt=""></p>
+<p>换上之后总想着再搞点事，由于主题没有分类和Tag，如果文章多了的话就显得太杂乱，我想在右上角的导航栏添加一个菜单做其他文章的目录，这样主页就可以只显示技术文章。有了这个想法后，就开始折腾了，由于对web前端hexo都不是很熟悉，还是花了一点时间去四处查资料和踩坑的。现在以这个主题为例将我修改的整个过程分享出来，希望能给有相似想法又爱折腾的朋友带来一点微小的帮助。</p>
+<p>完成后效果：<a href="http://royliu.xyz" target="_blank" rel="noopener">royliu.xyz</a></p>
+<h2 id="Hexo站点的布局结构"><a href="#Hexo站点的布局结构" class="headerlink" title="Hexo站点的布局结构"></a>Hexo站点的布局结构</h2><p>对于刚开始接触Hexo，只是对着官网教程搭建一步一步搭建blog站点的同学来说，如果你想要对其中的某些地方做自定义的修改，那你首先需要做的当然是了解一下这个Hexo的布局结构，它首页是怎样布局的，文章详情页又在哪里，这样当你心血来潮想要修改其中的某些样式时，才能有的放矢迅速找到自己需要去修改的地方。</p>
+<p>一般来说一个Hexo站点页面类型有这么几个：<code>index(首页)</code>、<code>post(文章详情页)</code>、<code>page(导航标签页)</code>、<code>archive(归档页)</code>、<code>categiry（类别页）</code>以及<code>tag(标签页)</code>，他们各自的作用大家看它们的名字应该都能猜的出来。有的主题设计比较简洁并没有把其中一些页面展示出来，但是一般首页和文章详情页是必须有的。</p>
+<p>就我使用的<code>yinwang</code>主题，其结构布局如下：</p>
+<ul>
+<li>yinwang/<ul>
+<li>_config.yml</li>
+<li>languages/</li>
+<li>source/</li>
+<li>README.md</li>
+<li>layout/<ul>
+<li>_partial/</li>
+<li>index.ejs</li>
+<li>layout.ejs</li>
+<li>page.ejs</li>
+<li>post.ejs</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>从上面的结构图可以看出来，主题的layout目录下的<code>index.ejs</code>、<code>page.ejs</code>、<code>post.ejs</code>和上文提到的页面类型中的<code>index(首页)</code>、<code>page(导航标签页)</code>、<code>post(文章详情页)</code>似乎有着某种联系，而目录下另外一个文件<code>layout.ejs</code>又有什么作用呢？让我们先来看一下<code>layout.ejs</code>文件中的内容：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">%-</span> <span class="attr">partial</span>('<span class="attr">_partial</span>/<span class="attr">head</span>')%&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">%-</span> <span class="attr">body</span>%&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">%if(is_home())&#123;%</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!--加载导航栏所需js文件--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">%-</span> <span class="attr">partial</span>('<span class="attr">_partial</span>/<span class="attr">afterfooter</span>')%&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">%&#125;%</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>可以看到这是一个html界面，其中的<code>&lt;%- partial(&#39;_partial/head&#39;)%&gt;</code>可以通过<a href="https://hexo.io/zh-cn/docs/helpers.html#partial" target="_blank" rel="noopener">官方文档</a>知道这是Hexo中一个载入其他模块文件的辅助函数，上面代码的意思就是在这个位置载入<code>_partial</code>目录下的<code>head.ejs</code>文件。而其中的<code>&lt;%- body %&gt;</code>又是什么呢，这正是Hexo布局的关键。</p>
+<p>Hexo的主题布局文件基本上都在<code>layout</code>这个文件之中，而<code>layout.ejs</code>正是每个模版的默认加载布局。无论是首页、文章详情页、标签页或者你自己定义的page页面，都会通过这个文件进行布局。这像是一个整体框架，而你自己页面的内容，就是通过<code>&lt;%- body %&gt;</code>进行引入。比如加载首页的时候，相当于将<code>layout</code>文件夹中<code>index.ejs</code>里面的代码替换到<code>&lt;%- body %&gt;</code>的位置。</p>
+<h2 id="Hexo新增菜单"><a href="#Hexo新增菜单" class="headerlink" title="Hexo新增菜单"></a>Hexo新增菜单</h2><p>经过上面Hexo布局基础的介绍，我们对其也有了基本的认识，下面就开始我们的重头戏：在导航栏新添加一个菜单，点击菜单时列出相对首页不同的其他文章目录，我在这里要演示的就是新增一个<code>随笔</code>菜单，把blog中的<code>随笔</code>都放在这个页面，当然这些不会在首页显示。</p>
+<h3 id="确定实现方式"><a href="#确定实现方式" class="headerlink" title="确定实现方式"></a>确定实现方式</h3><p>就如上文提到的，Hexo站点包括<code>index(首页)</code>、<code>post(文章详情页)</code>、<code>page(导航标签页)</code>、<code>archive(归档页)</code>、<code>category（类别页）</code>以及<code>tag(标签页)</code>，但是这些对我们并没有什么用，我们想要的是一个像首页一样能列出文章目录的页面类型。</p>
+<p>经过查阅资料，终于找到一种方式来实现：利用<code>categiry</code>页面。我们可以在想要区分为<code>随笔</code>的文章里面<a href="https://hexo.io/zh-cn/docs/front-matter.html" target="_blank" rel="noopener">Front-matter</a>里面标记<code>categories</code>参数为<code>随笔</code>，这样Hexo生成代码的时候会生成<code>categories/随笔</code>的目录，我们只要将地址链接到这个目录，将标记为<code>随笔</code>的文件名字列出来就可。</p>
+<h3 id="具体实现操作"><a href="#具体实现操作" class="headerlink" title="具体实现操作"></a>具体实现操作</h3><ol>
+<li><p>修改主题下<code>_config.yml</code>添加menu<br> <code>./themes/yinwang/_config.yml</code></p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">menu:</span><br><span class="line">  Blog: /</span><br><span class="line">  #categories: /categories</span><br><span class="line">  #archives: /archives</span><br><span class="line">  #tags: /tags</span><br><span class="line">  随笔: /categories/essay  #添加随笔title以及路径</span><br><span class="line">  GitHub: https:github.com/mickeyouyou</span><br><span class="line">  About: /about</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>在自己写的文章的<a href="https://hexo.io/zh-cn/docs/front-matter.html" target="_blank" rel="noopener">Front-matter</a>里添加<code>categories</code>参数</p>
+<p> <code>source/_posts/Butter-Knife中文文档.md</code></p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: Butter Knife中文文档</span><br><span class="line">date: 2016-06-06 21:40:45</span><br><span class="line">tags: [android,butter knife] </span><br><span class="line">categories: essay #在此处添加</span><br><span class="line">---</span><br><span class="line">正文...</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>通过上面两步之后，发现博客导航栏确实多了一个<code>随笔</code>的菜单，点击之后跳转到一个新页面，上面列出了我标记为<code>essay</code>的文章。</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/blog-page.png" alt=""></p>
+<p>但是随即发现存在几个问题：</p>
+<ol>
+<li>这个页面显示的是blog文章详情页面的样式，但是我是希望它仍然是首页的样式，并且存在导航栏</li>
+<li>首页的列表里还是显示了这篇文章</li>
+</ol>
+<h3 id="解决问题"><a href="#解决问题" class="headerlink" title="解决问题"></a>解决问题</h3><p>我们来解决上文提到的两个问题。<br>第一个问题是因为Hexo的配置文件中有个<code>default_layout: post</code>d的配置选项，因此如果你没有指定layout，它默认都会将其当作post的布局，即<code>layout.ejs</code>中<code>&lt;%- body %&gt;</code>引入的是<code>post.ejs</code>。<br>为了改变样式，我们可以新建一个布局文件，在<code>layout/_partial</code>文件夹中新建<code>essay.ejs</code>,里面代码和<code>archive.ejs</code>差不多(具体改动可以看文章最后的demo，会带注释说明)。然后修改<code>layout.ejs</code>:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- 点击随笔时页面地址中包含categories/essay/ --&gt;</span><br><span class="line">&lt;!-- 所以判断路径中没有categories默认布局文件，若包含则加载_partial/essay.ejs布局--&gt;</span><br><span class="line">&lt;% if(page.path.indexOf(&apos;categories&apos;)==-1)&#123; %&gt;</span><br><span class="line">&lt;%- body %&gt;</span><br><span class="line">&lt;% &#125;else&#123; %&gt;</span><br><span class="line">&lt;%- partial(&apos;_partial/essay&apos;, &#123;pagination: 1, index: true&#125;)%&gt;</span><br><span class="line">&lt;% &#125; %&gt;</span><br></pre></td></tr></table></figure>
+<p>注意这个主题的css和js文件都是在<code>head.ejs</code>中加载的，比如首页导航栏用的<code>bootstrap</code>，所以必须在<code>head.ejs</code>中添加代码，判断当页面时<code>categories</code>时也要加载相应的css。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- 添加is_category()方法--&gt;</span><br><span class="line">&lt;%if(is_home()||is_category()) &#123; %&gt;</span><br><span class="line">&lt;link href=&quot;&lt;%- url_for(theme.css) %&gt;/home.css?v=&lt;%- theme.version %&gt;&quot; rel=&quot;stylesheet&quot; type=&quot;text/css&quot; /&gt;</span><br><span class="line">&lt;%- css(&apos;css/bootstrap.min.css&apos;)%&gt;</span><br><span class="line">&lt;%- css(&apos;css/bootstrap-theme.min.css&apos;)%&gt;</span><br><span class="line">&lt;%&#125; else &#123;%&gt;</span><br><span class="line">&lt;!--&lt;%- css(&apos;css/main.css&apos;)%&gt;--&gt;</span><br><span class="line">&lt;link href=&quot;&lt;%- url_for(theme.css) %&gt;/main.css?v=&lt;%- theme.version %&gt;&quot; rel=&quot;stylesheet&quot; type=&quot;text/css&quot; /&gt;</span><br><span class="line">&lt;!--&lt;%- css(&apos;css/style.css&apos;)%&gt;--&gt;</span><br><span class="line">&lt;%&#125;%&gt;</span><br></pre></td></tr></table></figure>
+<p>这样当我们点击随笔时页面也和首页一样了，只是里面的文章目录变成了我们标记为<code>essay</code>的了。</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/blog-ok.png" alt=""></p>
+<p>这其中还有一个小问题是点击随笔的时候那个按钮的状态没切换，这可以通过修改<code>nav.ejs</code>以及新建js文件修改<code>class=&quot;active&quot;</code>来切换（详细修改见demo）。</p>
+<p>第二个问题是如何让首页不显示随笔中的文章，这只需要在<code>archive.ejs</code>中添加一个条件语句过滤掉有<code>categories</code>标记的文章即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;% page.posts.each(function(post)&#123; %&gt;</span><br><span class="line">&lt;% if(post.categories.length == 0)&#123; %&gt;</span><br><span class="line">&lt;%- partial(&apos;article&apos;, &#123;post: post, index: true&#125;) %&gt;</span><br><span class="line">&lt;% &#125; %&gt;</span><br><span class="line">&lt;% &#125;) %&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>通过上面一系列并不是特别复杂的操作，终于把博客改成了我自己想要的效果，虽然花去了不少时间，但是同时也学到了不少东西。同时也希望可以给想要给自己blog增加类似效果的朋友们一个参考，这整个demo在<a href="https://github.com/lololiu/hexo-blog-demo" target="_blank" rel="noopener">这里</a>上可以找到，希望能帮到大家，欢迎一起探讨交流！</p>
+
+            </div>
+        <div class="col-md-1">
+        </div>
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>

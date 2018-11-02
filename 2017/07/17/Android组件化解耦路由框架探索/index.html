@@ -1,0 +1,207 @@
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+	
+	<title>Android组件化解耦路由框架探索</title>
+	<meta name="keywords" content="My Blog, Spider Bitch!">
+    <meta name="baidu-site-verification" content="vxDbv63a4S">
+    <meta name="google-site-verification" content="9eUnNRo8qiEexz_FacVB-p-0z9OViF--gZ9kfL5hofo">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    
+    <!--<link rel="stylesheet" href="/css/main.css">-->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+    <link href="/css/main.css?v=2" rel="stylesheet" type="text/css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <!--<link rel="stylesheet" href="/css/style.css">-->
+    
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">
+
+    
+	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+    
+
+</head>
+
+<body 
+	
+	>
+
+
+
+    <div class="container center-block">
+        <div class="col-md-1"></div>
+        <div class="col-md-10 col-sm-12">
+            <h2 id="Android组件化解耦路由框架探索"><a href="#Android组件化解耦路由框架探索" class="headerlink" title="Android组件化解耦路由框架探索"></a>Android组件化解耦路由框架探索</h2><p>这几年 Android 开发技术发展可谓迅猛，一个个设计优良，使用简单顺手的框架层出不穷，各种新技术新名词也让我们应接不暇。插件化、组件化、热修复诸如此类，在实现基本功能之后，我们开始越来越关注怎么去优化代码架构与设计，使得项目功能越来越庞大的情况下，能保证代码不臃肿并方便以后的开发与维护。作为一位 Android 开发者，很高兴看到 Android 技术越来越成熟并且欣欣向荣地发展，同时也更加认识到自己需要好好研究学习这些技术。只有持续地学习，才不会固步自封。</p>
+<p>最近公司有个项目相当于在重写，其中也尝试着想通过组件化技术，将一些通用的代码和核心业务层的代码解耦出来，方便协调开发和以后其他项目中的复用。于是也趁此机会，好好地学习了一下 Android 组件化技术，并将一些总结记录下来。</p>
+<h3 id="几个问题"><a href="#几个问题" class="headerlink" title="几个问题"></a>几个问题</h3><ol>
+<li><p>什么是组件化？</p>
+<p>组件化就是将一个app的多个业务拆分成不同的组件（Module），使业务间能做到松耦合，甚至在开发期间可以独立运行和调试，等到最终发布时再将这些独立的 Module 组成一个完整的 apk 。</p>
+</li>
+<li><p>为什么要组件化？</p>
+<ul>
+<li>可以让业务逻辑更加清晰明确</li>
+<li>减少编译时间，提高工作效率</li>
+<li>更方便协同开发</li>
+</ul>
+</li>
+<li><p>怎么进行组件化？</p>
+<ol>
+<li>新建一个 app 工程 project ，工程里默认有一个 app Module ,可以直接运行。</li>
+<li>新建一个 lib 组件，可以命名为<code>base_utils</code>,存放项目中公共的工具类以及基础操作如网络请求、数据库操作等。</li>
+<li>新建一个 lib 组件，可以命名为<code>base_res</code>,存放项目中的公共资源，如<code>drawable</code>、<code>string</code>以及可以复用的布局文件等。</li>
+<li>将项目业务按需求划分为一个或多个 lib Module ，每个 Module 可以引用上面的<code>base_utils</code>或<code>base_res</code>。</li>
+<li>在 Gradle 文件中根据<code>buildTypes</code>来做出区分处理：在<code>debug</code>模式将 Module 设置成<code>apply plugin:&#39;com.android.application&#39;</code>，这样开发时期就可以将这个 Module 当做一个独立的 app 运行。而在<code>release</code>模式设置为<code>apply plugin:&#39;com.android.library&#39;</code>，这样又可以在应用发布时把它当成一个模块。对于项目代码庞大的应用来说，编译一个模块的效率肯定比编译整个应用要快的多。</li>
+</ol>
+</li>
+<li><p>模块内跳转和跨模块跳转有什么区别？</p>
+<p>以前我们的项目开发一般都是在一个模块里开发，比如 Android Studio 都在新建项目时自动生成的 app Module 里面通过建立<code>package</code>来区分不同的代码功能。因此，当我有两个页面为 FirstActivity 和 SecondActivity ，我想要从 FirstActivity 跳转到 SecondActivity ，只需要使用 Intent 设置<code>setClass(FirstActivity.this,SecondActivity.class)</code>就可以轻而易举地实现。</p>
+<p>但是如果我们项目中有两个 Module 由两个工程师分别开发，而 FirstActivity 和 SecondActivity 又分别在这两个 Module 中，那如果我再想要跳转又该如何呢？很明显<code>setClass(FirstActivity.this,SecondActivity.class)</code>是行不通了的，因为这两个 Module 并没有相互依赖，是没有办法引用到另一个 Activity 的。</p>
+<p>为了解决这个跨模块跳转的问题，路由技术应运而生。</p>
+</li>
+<li><p>什么是路由？</p>
+<p>维基百科中的说明是：</p>
+<blockquote>
+<p>路由（routing）就是通过互联的网络把信息从源地址传输到目的地址的活动</p>
+</blockquote>
+<p>将其意思引申到 Android 中，就是作为一个中转站，负责从一个页面跳转到另一个页面。如同上文所说，在同一个 Module 内其实我们是无须使用路由的，直接使用<code>startActivity()</code>就能很轻松地实现两个 Activity 的跳转。但是如果是两个 Module 之间的页面跳转呢？</p>
+<p>我们是这样解决的：新建一个 RouterModule ，在其中注册一个“路由表”，即将项目内所有的 Activity 的收集起来并为其设置一个字符串类型的<code>TAG</code>，也可以说是它的路径。当我们在 Module1 中有一个 Activity1 想要跳转到 Module2 中的 Activity2时，我们 Module1 和 Module2 都引用路由 RouterModule ，在 Activity1 中只要将 Activity2 在“路由表”的对应的路径告诉 RouterModule 就可以，而不需要去管怎么跳转，并且 Activity1 又没有直接引用 Activity2，这样即使 Module1 没有依赖 Module2，也不会造成编译失败的情况。</p>
+<p>整体思路就是这样的，下面通过具体实例来讲讲如何进行路由。</p>
+</li>
+</ol>
+<h3 id="Android-Scheme-协议实现跨模块页面跳转"><a href="#Android-Scheme-协议实现跨模块页面跳转" class="headerlink" title="Android Scheme 协议实现跨模块页面跳转"></a>Android Scheme 协议实现跨模块页面跳转</h3><h4 id="Scheme-协议"><a href="#Scheme-协议" class="headerlink" title="Scheme 协议"></a>Scheme 协议</h4><p>如果我们现在有这么一个需求，想要在应用程序 A 打开应用程序 B ，并跳转到 B 中的某个页面，比如我想在应用中调用系统相机或者短消息界面等等。还有一个需求，我们想在某个网页中通过用户点击可以直接跳转到客户端某个页面来，很多应用都有移动web端，并且支持“在APP中查看”功能，用户只需一点即可打开应用并且跳转到指定界面。</p>
+<p>这些都可以通过 Scheme 协议实现，简单地说， Scheme 协议是指你可以在<code>Mainfest.xml</code>配置好某个 Activity 的 URL Scheme 信息，然后我们便可以在其他 APP 中或者是浏览器中根据这个 URL 地址启动该应用并跳转到相应的页面。</p>
+<h4 id="lt-data-gt-标签"><a href="#lt-data-gt-标签" class="headerlink" title="&lt;data/&gt; 标签"></a><code>&lt;data/&gt;</code> 标签</h4><p>在<code>Androidmanifest.xml</code>中，可以为一个 Activity 设置<code>data</code>属性，<code>data</code>表示数据源，只要知道这个数据源，我们便能很轻易地在手机应用里成百上千的 Activity 中找到自己想要的页面地址。</p>
+<p><code>data</code>属性的语法如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">data</span> <span class="attr">android:host</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:mimeType</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:path</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:pathPattern</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:pathPrefix</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:port</span>=<span class="string">"string"</span></span></span><br><span class="line"><span class="tag">      <span class="attr">android:scheme</span>=<span class="string">"string"</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+<p>整个<code>data</code>标签中的属性拼接起来便构成了一个 URI 地址，地址格式为：<br><code>&lt;scheme&gt;://&lt;host&gt;:&lt;port&gt;[&lt;path&gt;|&lt;pathPrefix&gt;|&lt;pathPattern&gt;]</code></p>
+<ul>
+<li><p><code>android:scheme</code></p>
+<p>Scheme 协议名称，我们甚至可以只通过设置 Scheme 来指定一个 URI 。但是我们必须为<code>&lt;intent-filter&gt;</code>设置 Scheme ，不然其他的属性都会变得无意义。</p>
+<p>指定一个 Scheme 不需要加冒号，比如用<code>http</code> ，而不是<code>http:</code>。</p>
+<p>如果<code>&lt;intent-filter&gt;</code>中有数据类型集合（<code>mimetype</code>属性）但是没有指定 scheme ,系统会假定为<code>content:</code>和<code>file:</code>协议。</p>
+</li>
+<li><p><code>android:host</code></p>
+<p>URI 主机地址。可以使用星号<code>(*)</code>作为通配符匹配0个或多个字符。比如， host 为<code>*.google.com</code>可以匹配到<code>www.google.com</code>，<code>.google.com</code>和<code>developer.google.com</code>。</p>
+<p>值得注意的是，这个星号必须是 host 属性的第一个字符，使用<code>google.co.*</code>是非法的。</p>
+</li>
+<li><p><code>android:port</code></p>
+<p>URI 端口地址，无须多讲。</p>
+</li>
+<li><p><code>android:path</code>、<code>android:pathPrefix</code>、<code>android:pathPattern</code></p>
+<p>从字面上我们可以看出来这几个属性是指定 URI 的路径的。设置这个属性必须要以<code>/</code>开头。<code>path</code>属性指定了一条完整的路径，<code>pathPrefix</code>属性指定仅与 Intent 对象中路径的初始部分匹配的部分路径，而<code>pathPattern</code>属性指定与 Intent 对象中的完整路径匹配的完整路径，但它可以包含以下通配符：</p>
+<ul>
+<li>用星号<code>(*)</code>匹配紧随其前的字符的0次或多次出现。</li>
+<li>句点后跟星号<code>（.*）</code>匹配任何字符的0次或多次出现。</li>
+</ul>
+<p>在从 XML 读取字符串时（在作为表达式被解析以前），<code>\</code>被用作了转义字符， 因此需要进行二次转义：比如，<code>*</code>应写成 <code>\\*</code> ，<code>\</code>应写成 <code>\\\\</code> 。 这基本上和 Java 代码里构造字符串的写法相同。</p>
+</li>
+<li><p><code>android:mimeType</code></p>
+<p>MIME 多媒体类型，比如<code>image/jpeg</code>或<code>audio/mpeg4-generic</code>。子类型可以是通配符星号<code>(*)</code>，这表示可匹配任意子类型。</p>
+<p>Intent 过滤器常常会声明一个仅包含<code>android:mimeType</code>属性的<code>&lt;data&gt;</code>。</p>
+</li>
+</ul>
+<p>这个标签中的属性都是可选的，你可以选择使用或者不使用任意属性，但是它们也是相互依赖的：</p>
+<ul>
+<li>如果没有指定<code>scheme</code>属性，那么 URI 的其他属性都会被忽略</li>
+<li>如果没有指定<code>host</code>属性，那么 URI 的<code>port</code>属性和所以<code>path</code>属性都会被忽略</li>
+</ul>
+<h4 id="使用实例"><a href="#使用实例" class="headerlink" title="使用实例"></a>使用实例</h4><ol>
+<li><p>为需要跳转的 Activity 配置<code>&lt;intent-filter&gt;</code>:</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.DEFAULT"</span> /&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">data</span> <span class="attr">android:scheme</span>=<span class="string">"xx"</span> /&gt;</span></span><br><span class="line">     <span class="comment">&lt;!-- 设置了BROWSABLE属性后，从外部html页面就可以唤起当前配置的页面了 --&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">"android.intent.category.BROWSABLE"</span> /&gt;</span></span><br><span class="line">     <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">"android.intent.action.VIEW"</span> /&gt;</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>跳转页面</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent();</span><br><span class="line">intent.setAction(Intent.ACTION_VIEW);</span><br><span class="line">intent.setData(Uri.parse(<span class="string">"xx://royliu"</span>));</span><br><span class="line">startActivity(intent);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>这样就可以跳转到自己想要的页面了，而且不需要引用跳转对象，即使这个 Activity 是在另外的 Module 中，只要知道它在<code>AndroidManifest.xml</code>中配置的 URI 地址，就可以轻松地完成跳转。</p>
+<p>利用这个原理，再加上 Java <strong>动态代理</strong>和<strong>注解</strong>方面的知识，可以进一步优化代码，封装成一个简单的路由框架，具体的内容请参考<a href="http://www.cnblogs.com/whoislcj/p/5860138.html" target="_blank" rel="noopener">这里</a>。</p>
+<h3 id="ARouter-路由解耦框架"><a href="#ARouter-路由解耦框架" class="headerlink" title="ARouter 路由解耦框架"></a>ARouter 路由解耦框架</h3><p>上面利用 Android 隐性 Intent 跳转机制我们能很容易实现跨模块甚至跨进程的页面跳转。但是其中的问题也很容易就暴露出来，就是需要进行繁琐的配置。即使我们能够通过<strong>动态代理</strong>和<strong>注解</strong>解决代码中 URI 拼接和<code>setData</code>，但是在<code>&lt;intent-filter&gt;</code>中配置<code>&lt;data&gt;</code>是必不可少的。如果项目中的页面太大，一个一个配置确实也挺费力并且容易出错。那有没有办法解决这个问题呢？我们可以去看看其他开发者已经造好的轮子，看看他们是如何解决的。</p>
+<p>GitHub 上关于 Android 的路由框架有很多，如 <a href="https://github.com/campusappcn/AndRouter" target="_blank" rel="noopener">AndRouter</a> 、<a href="https://github.com/mzule/ActivityRouter" target="_blank" rel="noopener">ActivityRouter</a> 和 <a href="https://github.com/alibaba/ARouter" target="_blank" rel="noopener">ARouter</a> 等等。不过个人更喜欢阿里开源的<code>ARouter</code>。因为它不仅仅是一个解决页面跳转的路由框架，而且我从中也学到了组件化过程中优秀的<strong>解耦</strong>思想。</p>
+<h4 id="ARouter-可以做什么"><a href="#ARouter-可以做什么" class="headerlink" title="ARouter 可以做什么"></a>ARouter 可以做什么</h4><ul>
+<li>从外部URL映射到内部页面，以及参数传递与解析</li>
+<li>跨模块页面跳转，模块间解耦</li>
+<li>拦截跳转过程，处理登陆、埋点等逻辑</li>
+<li>跨模块API调用，通过控制反转来做组件解耦</li>
+</ul>
+<h4 id="基础配置及用法"><a href="#基础配置及用法" class="headerlink" title="基础配置及用法"></a>基础配置及用法</h4><p><code>ARouter</code>使用方法很简单，<code>README</code>中也有很详细的说明，下面贴一下最基础的用法，进阶用法请看官方文档。</p>
+<ol>
+<li><p>添加依赖和配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">android &#123;</span><br><span class="line">    defaultConfig &#123;</span><br><span class="line">      ...</span><br><span class="line">      javaCompileOptions &#123;</span><br><span class="line">          annotationProcessorOptions &#123;</span><br><span class="line">            arguments = [ moduleName : project.getName() ]</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">dependencies &#123;</span><br><span class="line">    // 替换成最新版本, 需要注意的是api</span><br><span class="line">    // 要与compiler匹配使用，均使用最新版可以保证兼容</span><br><span class="line">    compile &apos;com.alibaba:arouter-api:x.x.x&apos;</span><br><span class="line">    annotationProcessor &apos;com.alibaba:arouter-compiler:x.x.x&apos;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加注解</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 在支持路由的页面上添加注解(必选)</span></span><br><span class="line"><span class="comment">// 这里的路径需要注意的是至少需要有两级，/xx/xx</span></span><br><span class="line"><span class="meta">@Route</span>(path = <span class="string">"/test/activity"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">YourActivity</span> <span class="title">extend</span> <span class="title">Activity</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>初始化SDK</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">if (isDebug()) &#123;</span><br><span class="line">  	ARouter.openLog();     // 打印日志</span><br><span class="line">  	ARouter.openDebug();   // 开启调试模式(如果在InstantRun模式下运行，必须开启调试模式！线上版本需要关闭,否则有安全风险)</span><br><span class="line">&#125;</span><br><span class="line">ARouter.init(mApplication); // 尽可能早，推荐在Application中初始化</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>发起路由操作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 1. 应用内简单的跳转(通过URL跳转在'进阶用法'中)</span></span><br><span class="line">ARouter.getInstance().build(<span class="string">"/test/activity"</span>).navigation();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 跳转并携带参数</span></span><br><span class="line">ARouter.getInstance().build(<span class="string">"/test/1"</span>)</span><br><span class="line">		.withLong(<span class="string">"key1"</span>, <span class="number">666L</span>)</span><br><span class="line">		.withString(<span class="string">"key3"</span>, <span class="string">"888"</span>)</span><br><span class="line">		.withObject(<span class="string">"key4"</span>, <span class="keyword">new</span> Test(<span class="string">"Jack"</span>, <span class="string">"Rose"</span>))</span><br><span class="line">		.navigation();</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加混淆规则(如果使用了 Proguard)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">-keep public class com.alibaba.android.arouter.routes.**&#123;*;&#125;</span><br><span class="line">-keep class * implements com.alibaba.android.arouter.facade.template.ISyringe&#123;*;&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h4><h5 id="编译器注解处理器"><a href="#编译器注解处理器" class="headerlink" title="编译器注解处理器"></a>编译器注解处理器</h5><p>在上文的实例代码中如果你心细的话就会注意<code>build.gradle</code>文件中依赖项里有一句代码<code>annotationProcessor &#39;com.alibaba:arouter-compiler:x.x.x&#39;</code>。</p>
+<p>相信大家在项目中依赖第三方库时肯定接触过<code>APT</code>技术:</p>
+<blockquote>
+<p>APT ( Annotation Processing Tool )是一种处理注释的工具,它对源代码文件进行检测找出其中的 Annotation ，使用 Annotation 进行额外的处理。 Annotation 处理器在处理 Annotation 时可以根据源文件中的 Annotation 生成额外的源文件和其它的文件(文件具体内容由 Annotation 处理器的编写者决定), APT 还会编译生成的源文件和原来的源文件，将它们一起生成 class 文件。</p>
+</blockquote>
+<p>简单地说，APT 就是可以在<strong>编译期间</strong>根据源码中的注解生成新的文件并编译它们，我们在项目中就可以使用生成的代码，这样相比在<strong>运行时</strong>通过反射获取注解来说肯定效率和性能更高。比如<code>butterknife</code>、<code>dagger2</code>等很多热门开源项目都使用这技术。</p>
+<p>而上面的<code>annotationProcessor</code>，是 Android 官方发布用来完全代替 android-apt 的，自此 android-apt 作者在官网发表声明证实了后续将不会继续维护 android-apt ，并推荐大家使用 Android 官方插件<code>annotationProcessor</code> 。</p>
+<h5 id="ARouter-中的注解生成文件与加载"><a href="#ARouter-中的注解生成文件与加载" class="headerlink" title="ARouter 中的注解生成文件与加载"></a>ARouter 中的注解生成文件与加载</h5><p>下图引用自阿里云栖社区里官方分享的一篇<a href="https://yq.aliyun.com/articles/71687" target="_blank" rel="noopener">文章</a>，也很好地概况了页面注册阶段注解处理器操作和生成文件初始化过程，我们根据下图一步一步探讨相应代码。</p>
+<p><img src="https://yqfile.alicdn.com/9f9341fe74bf412b94dbe5b8924c2e51d4b3f070.png" alt=""></p>
+<ol>
+<li><p>注解处理器扫出被标注的类文件</p>
+<p>从<a href="https://github.com/alibaba/ARouter" target="_blank" rel="noopener">GitHub</a>中把项目 clone 下来后，导入工程中，可以发现项目结构如下图所示：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/ARouter%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84.png" alt="ARouter Demo 项目结构"></p>
+<p>其中有两个子模块<code>arouter-annotation</code>和<code>arouter-compiler</code>，它们分别是编译期间需要处理的注解和对应的注解处理器。如<code>arouter-annotation</code>的 annotation 包下有四个注解：<code>@Autowired</code>、<code>@Interceptor</code>、<code>@Param</code>和<code>@Router</code>，其中<code>@Param</code>已经弃用并且使用<code>@Autowired</code>替代，因此不考虑。我们在<code>arouter-compiler</code>中可以找到这三个注解对应的处理器：<code>AutowiredProcessor</code>、<code>InterceptorProcessor</code>和<code>RouteProcessor</code>。</p>
+<p>当项目编译时，<code>annotationProcessor</code>首先会扫描源码中使用了该注解的文件，然后根据注解找到对应的注解处理器进行处理。 </p>
+</li>
+<li><p>按照不同种类源文件分类</p>
+<p>在<code>arouter-annotation</code>中有一个<code>RouteType.java</code>的枚举类，这个主要是用来描述路由类型的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> RouteType &#123;</span><br><span class="line">    ACTIVITY(<span class="number">0</span>, <span class="string">"android.app.Activity"</span>),</span><br><span class="line">    SERVICE(<span class="number">1</span>, <span class="string">"android.app.Service"</span>),</span><br><span class="line">    PROVIDER(<span class="number">2</span>, <span class="string">"com.alibaba.android.arouter.facade.template.IProvider"</span>),</span><br><span class="line">    CONTENT_PROVIDER(-<span class="number">1</span>, <span class="string">"android.app.ContentProvider"</span>),</span><br><span class="line">    BOARDCAST(-<span class="number">1</span>, <span class="string">""</span>),</span><br><span class="line">    METHOD(-<span class="number">1</span>, <span class="string">""</span>),</span><br><span class="line">    FRAGMENT(-<span class="number">1</span>, <span class="string">"android.app.Fragment"</span>),</span><br><span class="line">    UNKNOWN(-<span class="number">1</span>, <span class="string">"Unknown route type"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> id;</span><br><span class="line">    String className;</span><br><span class="line">  	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由上面代码可知，现在路由类型暂且支持<code>Activity</code>、<code>Service</code>和<code>IProvider</code>类型，将来可能会支持更多的如<code>ContentProvider</code>和<code>Method</code>等类型。那么这个<code>RouteType</code>到底是用来干嘛的呢？为什么要进行分类呢？</p>
+<p>简单地讲，我们知道平常跳转到一个<code>Activity</code>和跳转到一个<code>Service</code>的代码并不是完全相同的，而<code>ARouter</code>其实最底层还是使用的<code>startActivity</code>或<code>startService</code>，因此当收到一个页面跳转请求时，我们首先需要确认需要跳转的目的地是什么类型，然后根据这个类型来选择对应的方法。</p>
+</li>
+<li><p>按照固定的命名格式生成映射文件</p>
+<p>编译时自动生成的文件在<code>build/generated/source/apt</code>目录下，我们运行 ARouter 官方 Demo 后，查看 app 模块该目录可以发现生成了如下文件：</p>
+<p><img src="https://blog-1252889355.cos.ap-shanghai.myqcloud.com/%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90%E6%96%87%E4%BB%B6.png" alt=""></p>
+<p><code>routes</code>包下面默认会根据路由类型生成几类文件。首先我们看一下<code>ARouter$$Root$$app.java</code>类：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ARouter</span>$$<span class="title">Root</span>$$<span class="title">app</span> <span class="keyword">implements</span> <span class="title">IRouteRoot</span> </span>&#123;</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">loadInto</span><span class="params">(Map&lt;String, Class&lt;? extends IRouteGroup&gt;&gt; routes)</span> </span>&#123;</span><br><span class="line">    routes.put(<span class="string">"service"</span>, ARouter$$Group$$service.class);</span><br><span class="line">    routes.put(<span class="string">"test"</span>, ARouter$$Group$$test.class);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的代码很简单，就是把另外两个生成类<code>ARouter$$Group$$service.class</code>和<code>ARouter$$Group$$test.class</code>放入一个Map中。我们再看下其中<code>ARouter$$Group$$test.class</code>代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ARouter</span>$$<span class="title">Group</span>$$<span class="title">test</span> <span class="keyword">implements</span> <span class="title">IRouteGroup</span> </span>&#123;</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">loadInto</span><span class="params">(Map&lt;String, RouteMeta&gt; atlas)</span> </span>&#123;</span><br><span class="line">    atlas.put(<span class="string">"/test/activity1"</span>, RouteMeta.build(RouteType.ACTIVITY, Test1Activity.class, <span class="string">"/test/activity1"</span>, <span class="string">"test"</span>, <span class="keyword">new</span> java.util.HashMap&lt;String, Integer&gt;()&#123;&#123;put(<span class="string">"pac"</span>, <span class="number">9</span>); put(<span class="string">"obj"</span>, <span class="number">10</span>); put(<span class="string">"name"</span>, <span class="number">8</span>); put(<span class="string">"boy"</span>, <span class="number">0</span>); put(<span class="string">"age"</span>, <span class="number">3</span>); put(<span class="string">"url"</span>, <span class="number">8</span>); &#125;&#125;, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">    atlas.put(<span class="string">"/test/activity2"</span>, RouteMeta.build(RouteType.ACTIVITY, Test2Activity.class, <span class="string">"/test/activity2"</span>, <span class="string">"test"</span>, <span class="keyword">new</span> java.util.HashMap&lt;String, Integer&gt;()&#123;&#123;put(<span class="string">"key1"</span>, <span class="number">8</span>); &#125;&#125;, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">    atlas.put(<span class="string">"/test/activity3"</span>, RouteMeta.build(RouteType.ACTIVITY, Test3Activity.class, <span class="string">"/test/activity3"</span>, <span class="string">"test"</span>, <span class="keyword">new</span> java.util.HashMap&lt;String, Integer&gt;()&#123;&#123;put(<span class="string">"name"</span>, <span class="number">8</span>); put(<span class="string">"boy"</span>, <span class="number">0</span>); put(<span class="string">"age"</span>, <span class="number">3</span>); &#125;&#125;, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">    atlas.put(<span class="string">"/test/activity4"</span>, RouteMeta.build(RouteType.ACTIVITY, Test4Activity.class, <span class="string">"/test/activity4"</span>, <span class="string">"test"</span>, <span class="keyword">null</span>, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">    atlas.put(<span class="string">"/test/fragment"</span>, RouteMeta.build(RouteType.FRAGMENT, BlankFragment.class, <span class="string">"/test/fragment"</span>, <span class="string">"test"</span>, <span class="keyword">null</span>, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">    atlas.put(<span class="string">"/test/webview"</span>, RouteMeta.build(RouteType.ACTIVITY, TestWebview.class, <span class="string">"/test/webview"</span>, <span class="string">"test"</span>, <span class="keyword">null</span>, -<span class="number">1</span>, -<span class="number">2147483648</span>));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>同样是将一些信息放入一个 Map 中。看过官方文档的话，我们知道这个 Map 中的 Key 是放的某个 Activity 或 Fragment 的路径，就是<code>@Route</code>注解里指定的<code>Path</code>值。而 Map 中的 value 则是一个传参构建的 RouteMeta 类型的对象，存放这次页面跳转的具体信息。</p>
+<p>这里的<code>ARouter$$Root$$app.java</code>、<code>ARouter$$Group$$service.java</code>和<code>ARouter$$Group$$test.java</code>这三个类到底有什么联系呢？仔细观察一下就会发现，我们在<code>@Route</code>注解中的 path 主要设置了两类：一类是<code>@Route(path = &quot;/test/xxx&quot;)</code>的形式，另一类是<code>@Route(path = &quot;/service/xx&quot;)</code>的形式。而生成的<code>ARouter$$Group$$service.java</code>和<code>ARouter$$Group$$test.java</code>最后的名称正好对应着 path 中的第一段路径名。相当于app 模块中根据 path 中第一段分成了 test 和 service 两个组（ Group ），然后根据这两组生成了<code>ARouter$$Group$$组名.java</code>的文件，最后将这两个文件都添加到<code>ARouter$$Root$$app.java</code>文件中。</p>
+</li>
+<li><p>初始化的时候通过固定包名加载映射文件</p>
+<p>官方说明中对 ARouter 的加载这么说道：</p>
+<blockquote>
+<p>ARouter 在初始化的时候只会一次性地加载所有的 root 结点，而不会加载任何一个 Group 结点，这样就会极大地降低初始化时加载结点的数量。因为每个模块中可能有 N 个分组，每个分组中可能有N个页面，如果一次性地将所有的页面全部加载进来，那么整个复杂度可能不只是 O(N^2) ，但是每个模块都只加载其根节点，从算法的角度考虑可能就是复杂度为 O(N) 的方案，也就是有多少个模块就只需要加载多少个结点。那么什么时候加载分组结点呢？其实就是当某一个分组下的某一个页面第一次被访问的时候，整个分组的全部页面都会被加载进去，这就是 ARouter 的按需加载。其实在整个 APP 运行的周期中，并不是所有的页面都需要被访问到，可能只有20%的页面能够被访问到，所以这时候使用按需加载的策略就显得非常重要了，这样就会减轻很大的内存压力。</p>
+</blockquote>
+<p>ARouter 初始化代码为<code>ARouter.init(getApplication());</code>，一层一层进去会发现最终调用的是<code>LogisticsCenter.init(mContext, executor);</code>。其中<code>init()</code>中具体代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(Context context, ThreadPoolExecutor tpe)</span> <span class="keyword">throws</span> HandlerException </span>&#123;</span><br><span class="line">    mContext = context;</span><br><span class="line">    executor = tpe;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// These class was generate by arouter-compiler.</span></span><br><span class="line">        List&lt;String&gt; classFileNames = ClassUtils.getFileNameByPackageName(mContext, ROUTE_ROOT_PAKCAGE);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//</span></span><br><span class="line">        <span class="keyword">for</span> (String className : classFileNames) &#123;</span><br><span class="line">            <span class="keyword">if</span> (className.startsWith(ROUTE_ROOT_PAKCAGE + DOT + SDK_NAME + SEPARATOR + SUFFIX_ROOT)) &#123;</span><br><span class="line">                <span class="comment">// This one of root elements, load root.</span></span><br><span class="line">                ((IRouteRoot) (Class.forName(className).getConstructor().newInstance())).loadInto(Warehouse.groupsIndex);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (className.startsWith(ROUTE_ROOT_PAKCAGE + DOT + SDK_NAME + SEPARATOR + SUFFIX_INTERCEPTORS)) &#123;</span><br><span class="line">                <span class="comment">// Load interceptorMeta</span></span><br><span class="line">                ((IInterceptorGroup) (Class.forName(className).getConstructor().newInstance())).loadInto(Warehouse.interceptorsIndex);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (className.startsWith(ROUTE_ROOT_PAKCAGE + DOT + SDK_NAME + SEPARATOR + SUFFIX_PROVIDERS)) &#123;</span><br><span class="line">                <span class="comment">// Load providerIndex</span></span><br><span class="line">                ((IProviderGroup) (Class.forName(className).getConstructor().newInstance())).loadInto(Warehouse.providersIndex);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">	...</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> HandlerException(TAG + <span class="string">"ARouter init logistics center exception! ["</span> + e.getMessage() + <span class="string">"]"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>ClassUtils.getFileNameByPackageName</code>方法作用是列出某一个包名下的文件名，从代码中我们可以知道，初始化开始时，需要先找到<code>com.alibaba.android.arouter.routes</code>这个包下所有文件，也就是上文分析过的 ARouter 在编译过程中生成的映射文件。然后根据它们的命名规则区分是 Group、Interceptor 还是 Provider，通过反射机制构建实例调用其<code>loadInto</code>方法，将包含路由信息的 Map 加载到<code>Warehouse</code>中的静态变量中。</p>
+</li>
+</ol>
+<h5 id="基本操作下跳转页面源码追踪"><a href="#基本操作下跳转页面源码追踪" class="headerlink" title="基本操作下跳转页面源码追踪"></a>基本操作下跳转页面源码追踪</h5><h5 id="拦截器运行原理"><a href="#拦截器运行原理" class="headerlink" title="拦截器运行原理"></a>拦截器运行原理</h5><h5 id="依赖注入的实现"><a href="#依赖注入的实现" class="headerlink" title="依赖注入的实现"></a>依赖注入的实现</h5><h3 id="参考-amp-感谢"><a href="#参考-amp-感谢" class="headerlink" title="参考&amp;感谢"></a>参考&amp;感谢</h3><ul>
+<li><a href="https://yq.aliyun.com/articles/71687" target="_blank" rel="noopener">开源最佳实践：Android平台页面路由框架ARouter</a></li>
+<li><a href="http://www.cnblogs.com/whoislcj/p/5860138.html" target="_blank" rel="noopener">Android业务组件化之子模块SubModule的拆分以及它们之间的路由Router实现</a></li>
+</ul>
+
+            </div>
+        <div class="col-md-1">
+        </div>
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+	
+	<title>okhttp配置https选择性忽略证书认证</title>
+	<meta name="keywords" content="My Blog, Spider Bitch!">
+    <meta name="baidu-site-verification" content="vxDbv63a4S">
+    <meta name="google-site-verification" content="9eUnNRo8qiEexz_FacVB-p-0z9OViF--gZ9kfL5hofo">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    
+    <!--<link rel="stylesheet" href="/css/main.css">-->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+    <link href="/css/main.css?v=2" rel="stylesheet" type="text/css">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/common.js"></script>
+    <!--<link rel="stylesheet" href="/css/style.css">-->
+    
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom feed">
+
+    
+	<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+    
+
+</head>
+
+<body 
+	
+	>
+
+
+
+    <div class="container center-block">
+        <div class="col-md-1"></div>
+        <div class="col-md-10 col-sm-12">
+            <h2 id="okhttp配置https选择性忽略证书认证"><a href="#okhttp配置https选择性忽略证书认证" class="headerlink" title="okhttp配置https选择性忽略证书认证"></a>okhttp配置https选择性忽略证书认证</h2><p>随着越来越多的公司及产品对应用传输数据的安全的重视，许多应用都已经使用了<code>Https</code>进行网络请求。最近项目使用Rxjava2+Retrofit2网络框架，正式线上环境后台已经全部切换到Https，但是测试环境还是使用http请求，因此需要对https证书认证进行选择性忽略。</p>
+<p>Okhttp配置https的方法网上很多，在此不做赘述。</p>
+<p>配置完后，可以正常访问带https证书的地址，但是如果有的地址没有配置，url还带<code>https</code>进行请求的话，就会报错：</p>
+<blockquote>
+<p>OkHttp javax.net.ssl.SSLPeerUnverifiedException: Hostname domain.com not verified</p>
+</blockquote>
+<p>网上的方法都是建议添加<code>hostnameVerifier</code>默认返回<code>true</code>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">mOkHttpClient = <span class="keyword">new</span> OkHttpClient.Builder()</span><br><span class="line">    .readTimeout(HTTP_READ_TIMEOUT, TimeUnit.MILLISECONDS)</span><br><span class="line">    .connectTimeout(HTTP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)</span><br><span class="line">    .sslSocketFactory(HTTPSManager.buildSSLSocketFactory(mContext, inputStream))</span><br><span class="line">    <span class="comment">//测试地址时忽略https证书认证</span></span><br><span class="line">    .hostnameVerifier(<span class="keyword">new</span> HostnameVerifier() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">verify</span><span class="params">(String hostname, SSLSession session)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
+<p>但是这样的话相当于所有地址都被忽略认证了，那这样转https请求就没有什么意义了。</p>
+<p>阅读了<code>OkHttpClient.java</code>的源码后发现，里面有一个默认的<code>hostnameVerifier</code>对请求地址进行认证：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hostnameVerifier = OkHostnameVerifier.INSTANCE;</span><br></pre></td></tr></table></figure>
+<p>因此我们只需要先对地址进行一下判断，如果不符合忽略地址的我们可以手动再调用这个类里面的方法进行认证：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">mOkHttpClient = <span class="keyword">new</span> OkHttpClient.Builder()</span><br><span class="line">    .readTimeout(HTTP_READ_TIMEOUT, TimeUnit.MILLISECONDS)</span><br><span class="line">    .connectTimeout(HTTP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)</span><br><span class="line">    .sslSocketFactory(HTTPSManager.buildSSLSocketFactory(mContext, inputStream))</span><br><span class="line">    .hostnameVerifier(<span class="keyword">new</span> HostnameVerifier() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">verify</span><span class="params">(String hostname, SSLSession session)</span> </span>&#123;</span><br><span class="line">            <span class="comment">//对hostname进行判断，对需要忽略证书认证的地址直接返回true</span></span><br><span class="line">            <span class="keyword">if</span> (hostname.equals(<span class="string">"192.168.1.1"</span>)) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                OkHostnameVerifier v = OkHostnameVerifier.INSTANCE;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Certificate[] e = session.getPeerCertificates();</span><br><span class="line">                    <span class="keyword">return</span> v.verify(hostname, (X509Certificate) e[<span class="number">0</span>]);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (SSLException var5) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
+
+            </div>
+        <div class="col-md-1">
+        </div>
+    </div>
+
+
+
+
+
+
+
+</body>
+</html>
